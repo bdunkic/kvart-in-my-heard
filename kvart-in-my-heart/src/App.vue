@@ -42,12 +42,13 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 
-const odabraniKvart = ref('Trešnjevka - sjever');
+// Postavljamo Donji grad kao početni kvart
+const odabraniKvart = ref('Donji grad');
 const ucitavanje = ref(false);
 const vijesti = ref([]);
 
 const kvartovi = [
-  'Donji Grad', 'Gornji Grad - Medveščak', 'Trnje', 'Maksimir', 
+  'Donji grad', 'Gornji grad - Medveščak', 'Trnje', 'Maksimir', 
   'Peščenica - Žitnjak', 'Novi Zagreb - istok', 'Novi Zagreb - zapad', 
   'Trešnjevka - sjever', 'Trešnjevka - jug', 'Črnomerec', 
   'Gornja Dubrava', 'Donja Dubrava', 'Stenjevec', 'Podsused - Vrapče', 
@@ -58,10 +59,8 @@ const dohvatiPodatke = async () => {
   ucitavanje.value = true;
   vijesti.value = [];
   
-  // OVDJE ZALIJEPI PRAVI RESOURCE ID S PORTALA DATA.ZAGREB.HR
-  const resource_id = '52e56b3a-ad9a-410e-8a83-5f50daac936e'; 
-  
-  // Koristimo /api umjesto pune domene zbog proxyja koji rješava CORS problem
+  // OVDJE ZALIJEPI PRAVI RESOURCE ID S PORTALA (između navodnika)
+  const resource_id = 'da0880fe-0fe1-4921-a27a-1ddb51cf87e1'; 
   const apiUrl = `/api/3/action/datastore_search?resource_id=${resource_id}&limit=100`;
 
   try {
@@ -74,21 +73,19 @@ const dohvatiPodatke = async () => {
     const podaci = await response.json();
     const sviZapisi = podaci.result.records;
 
-    // 1. FILTRIRANJE KVARTOVA
+    // 1. Filtriranje po odabranom kvartu
     const zapisiZaKvart = sviZapisi.filter(zapis => {
       const kvartAPI = zapis["Gradska četvrt"];
-      // Provjeravamo postoji li kvart i pretvaramo sve u mala slova radi točne usporedbe
       return kvartAPI && kvartAPI.toLowerCase() === odabraniKvart.value.toLowerCase();
     });
 
-    // 2. MAPIRANJE PODATAKA (Koristimo točna imena stupaca s tvoje slike)
+    // 2. Mapiranje točnih stupaca
     vijesti.value = zapisiZaKvart.map(zapis => {
       return {
         id: zapis._id,
         izvor: zapis["Naslov"] || 'Plan komunalnih akcija',
         naslov: zapis["NAMJENA"] || 'Komunalni radovi', 
-        // Spajamo NAMJENU 2 i Vrijednost u opis
-        opis: zapis["NAMJENA 2"] ? `${zapis["NAMJENA 2"]} (Procijenjena vrijednost: ${zapis["VRIJEDNOST U EURIMA"]} €)` : 'Detalji su dostupni u službenom registru.',
+        opis: zapis["NAMJENA 2"] ? `${zapis["NAMJENA 2"]} (Procijenjena vrijednost: ${zapis["VRIJEDNOST U EURIMA"]} €)` : 'Detalji u službenom registru.',
         lokacija: zapis["LOKACIJA - OBJEKT"] || 'Točna lokacija nije navedena'
       };
     });
@@ -99,12 +96,13 @@ const dohvatiPodatke = async () => {
       id: 'error',
       izvor: 'Sustav',
       naslov: 'Greška u spajanju',
-      opis: 'Nije moguće povući podatke sa servera. Provjerite konzolu.',
+      opis: 'Nije moguće povući podatke. Provjeri resource_id.',
       lokacija: 'Sustav'
     }];
   } finally {
     ucitavanje.value = false;
   }
+};
 
 onMounted(() => {
   dohvatiPodatke();
