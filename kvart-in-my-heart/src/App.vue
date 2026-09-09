@@ -73,21 +73,23 @@ const dohvatiPodatke = async () => {
     
     const podaci = await response.json();
     const sviZapisi = podaci.result.records;
-    console.log("SVI PODACI S PORTALA:", sviZapisi);
 
+    // 1. FILTRIRANJE KVARTOVA
+    const zapisiZaKvart = sviZapisi.filter(zapis => {
+      const kvartAPI = zapis["Gradska četvrt"];
+      // Provjeravamo postoji li kvart i pretvaramo sve u mala slova radi točne usporedbe
+      return kvartAPI && kvartAPI.toLowerCase() === odabraniKvart.value.toLowerCase();
+    });
 
-    const zapisiZaKvart = sviZapisi.filter(zapis => 
-      zapis.gradska_cetvrt === odabraniKvart.value || 
-      zapis.Gradska_cetvrt === odabraniKvart.value
-    );
-
+    // 2. MAPIRANJE PODATAKA (Koristimo točna imena stupaca s tvoje slike)
     vijesti.value = zapisiZaKvart.map(zapis => {
       return {
         id: zapis._id,
-        izvor: 'Open Data Zagreb',
-        naslov: zapis.Vrsta_rada || zapis.naslov || 'Komunalna obavijest', 
-        opis: zapis.Opis || zapis.opis || 'Više detalja dostupno je u službenom registru.',
-        lokacija: zapis.Lokacija || zapis.adresa || 'Nepoznata lokacija'
+        izvor: zapis["Naslov"] || 'Plan komunalnih akcija',
+        naslov: zapis["NAMJENA"] || 'Komunalni radovi', 
+        // Spajamo NAMJENU 2 i Vrijednost u opis
+        opis: zapis["NAMJENA 2"] ? `${zapis["NAMJENA 2"]} (Procijenjena vrijednost: ${zapis["VRIJEDNOST U EURIMA"]} €)` : 'Detalji su dostupni u službenom registru.',
+        lokacija: zapis["LOKACIJA - OBJEKT"] || 'Točna lokacija nije navedena'
       };
     });
 
@@ -97,13 +99,12 @@ const dohvatiPodatke = async () => {
       id: 'error',
       izvor: 'Sustav',
       naslov: 'Greška u spajanju',
-      opis: 'Nije moguće povući podatke sa servera Grada Zagreba. Provjerite jeste li unijeli ispravan resource_id.',
+      opis: 'Nije moguće povući podatke sa servera. Provjerite konzolu.',
       lokacija: 'Sustav'
     }];
   } finally {
     ucitavanje.value = false;
   }
-};
 
 onMounted(() => {
   dohvatiPodatke();
