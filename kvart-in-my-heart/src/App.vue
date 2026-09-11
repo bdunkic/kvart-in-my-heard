@@ -59,9 +59,9 @@ const dohvatiPodatke = async () => {
   ucitavanje.value = true;
   vijesti.value = [];
   
-  // OVDJE ZALIJEPI PRAVI RESOURCE ID S PORTALA (između navodnika)
-  const resource_id = 'da0880fe-0fe1-4921-a27a-1ddb51cf87e1'; 
-  const apiUrl = `/api/3/action/datastore_search?resource_id=${resource_id}&limit=100`;
+  // Točan ID resursa iščitan iz URL-a s tvoje slike
+  const resource_id = '44a733b6-953c-4e73-92e8-86f78e95bc4c'; 
+  const apiUrl = `/api/3/action/datastore_search?resource_id=${resource_id}&limit=500`;
 
   try {
     const response = await fetch(apiUrl);
@@ -73,20 +73,22 @@ const dohvatiPodatke = async () => {
     const podaci = await response.json();
     const sviZapisi = podaci.result.records;
 
-    // 1. Filtriranje po odabranom kvartu
+    // 1. Filtriranje (tražimo ime kvarta unutar teksta Lokacije)
     const zapisiZaKvart = sviZapisi.filter(zapis => {
-      const kvartAPI = zapis["Gradska četvrt"];
-      return kvartAPI && kvartAPI.toLowerCase() === odabraniKvart.value.toLowerCase();
+      const lokacija = zapis.Lokacija || '';
+      // Budući da u podacima piše npr. "Brezovica", tražimo podudaranje
+      return lokacija.toLowerCase().includes(odabraniKvart.value.toLowerCase());
     });
 
-    // 2. Mapiranje točnih stupaca
+    // 2. Mapiranje točnih stupaca sa tvoje slike
     vijesti.value = zapisiZaKvart.map(zapis => {
       return {
-        id: zapis._id,
-        izvor: zapis["Naslov"] || 'Plan komunalnih akcija',
-        naslov: zapis["NAMJENA"] || 'Komunalni radovi', 
-        opis: zapis["NAMJENA 2"] ? `${zapis["NAMJENA 2"]} (Procijenjena vrijednost: ${zapis["VRIJEDNOST U EURIMA"]} €)` : 'Detalji u službenom registru.',
-        lokacija: zapis["LOKACIJA - OBJEKT"] || 'Točna lokacija nije navedena'
+        id: zapis.ID || Math.random(),
+        izvor: 'Plan komunalnih aktivnosti',
+        naslov: zapis.Aktivnost || 'Komunalna aktivnost', 
+        // Koristimo stupac Iznos za prikaz vrijednosti radova
+        opis: `Planirani iznos za ovu aktivnost: ${zapis.Iznos || 0} €`,
+        lokacija: zapis.Lokacija || 'Točna lokacija nije navedena'
       };
     });
 
@@ -96,7 +98,7 @@ const dohvatiPodatke = async () => {
       id: 'error',
       izvor: 'Sustav',
       naslov: 'Greška u spajanju',
-      opis: 'Nije moguće povući podatke. Provjeri resource_id.',
+      opis: 'Nije moguće povući podatke s portala.',
       lokacija: 'Sustav'
     }];
   } finally {
